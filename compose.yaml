@@ -1,0 +1,72 @@
+services:
+  app:
+    build:
+      context: .
+      target: development
+    container_name: app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - DATABASE_URL=postgresql://db_user:db_password@postgres:5432/my_database?schema=public
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  #
+  drizzle-gateway:
+    image: ghcr.io/drizzle-team/gateway:latest
+    volumes:
+      - drizzle-gateway:/app
+    ports:
+      - "4983:4983"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    environment:
+      - POSTGRES_USER=db_user
+      - POSTGRES_PASSWORD=db_password
+      - POSTGRES_DB=my_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U db_user -d my_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  drizzle-gateway:
+    driver: local
