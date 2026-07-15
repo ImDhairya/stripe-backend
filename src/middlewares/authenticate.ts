@@ -1,6 +1,6 @@
 import {RequestHandler} from "express";
-import env from "../lib/env";
 import {UnauthenticatedError} from "../lib/errors";
+import {verifyAccessToken} from "../lib/jwt";
 
 /**
  * Middleware to authenticate requests using JWT from cookies or Authorization header.
@@ -19,11 +19,7 @@ export const authenticate: RequestHandler = async (req, res, next) => {
       );
     }
 
-    const jose = await import("jose");
-    const encoder = new TextEncoder();
-    const secretKey = encoder.encode(env.ACCESS_TOKEN_SECRET);
-
-    const {payload} = await jose.jwtVerify(token, secretKey);
+    const payload = await verifyAccessToken(token);
 
     if (!payload.id || !payload.email) {
       throw new UnauthenticatedError(
@@ -33,8 +29,10 @@ export const authenticate: RequestHandler = async (req, res, next) => {
     }
 
     res.locals.user = {
-      id: payload.id as string,
-      email: payload.email as string,
+      id: payload.id,
+      email: payload.email,
+      role: payload.role,
+      tier: payload.tier,
     };
 
     next();

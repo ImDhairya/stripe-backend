@@ -12,6 +12,17 @@ import {
   validateBody,
   validateQuery,
 } from "./middlewares";
+import adminRoutes from "./components/admin/routes";
+import paymentRoutes from "./components/payments/routes";
+import refundRoutes from "./components/refunds/routes";
+import subscriptionRoutes from "./components/subscriptions/routes";
+import searchRoutes from "./components/search/routes";
+import stripeWebhookRoutes from "./components/stripe-webhooks/routes";
+import webhookEndpointRoutes from "./components/webhook-endpoints/routes";
+import testingRoutes from "./components/testing/routes";
+
+import {metricsEndpoint} from "./lib/metrics";
+
 class App {
   private app: express.Application;
   constructor() {
@@ -25,6 +36,7 @@ class App {
 
   // initialize middlewares will be used to make the app setup correctly for the cors and related proxy middelware setups
   private initializeMiddlewares() {
+    this.app.get("/metrics", metricsEndpoint);
     this.app.use(accessLog);
     this.app.use(
       express.json({
@@ -56,14 +68,24 @@ class App {
   }
 
   private initializeRoutes() {
-    const routes: Route[] = [...userRoutes];
+    const routes: Route[] = [
+      ...userRoutes,
+      ...adminRoutes,
+      ...paymentRoutes,
+      ...refundRoutes,
+      ...subscriptionRoutes,
+      ...searchRoutes,
+      ...stripeWebhookRoutes,
+      ...webhookEndpointRoutes,
+      ...testingRoutes
+    ];
     const supportedMethods = ["get", "post", "put", "delete", "patch"] as const;
     routes.forEach((route) => {
       const {path: _path, method, handler, schema} = route;
       const middlewares = [...(route.middlewares || [])];
       const path = `/api${_path}`;
 
-      if (!route.isPublic) middlewares.push(authenticate);
+      if (!route.isPublic) middlewares.unshift(authenticate);
       if (schema) middlewares.push(validateBody(schema));
       if (route.querySchema) middlewares.push(validateQuery(route.querySchema));
 

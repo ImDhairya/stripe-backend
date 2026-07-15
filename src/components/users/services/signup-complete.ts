@@ -23,12 +23,17 @@ export default async (data: signupCompleteSchema, db: DbConnection = _db) => {
     );
   }
  
+  const targetEmail = email.toLowerCase();
+  const isAdmin = targetEmail.endsWith("@paygate.com");
+
   const newUser = await createUser(
     {
       user: {
         email: email,
         password: hashedPassword,
         name: data.name,
+        role: isAdmin ? "admin" : "user",
+        tier: isAdmin ? "paid" : "free",
       },
     },
     db,

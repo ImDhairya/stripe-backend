@@ -1,3 +1,8 @@
+
+action_plan.md
+requirement.md
+
+
 # Dependencies
 node_modules/
 
@@ -26,3 +31,5 @@ drizzle/meta/
 
 # Misc
 *.tsbuildinfo
+
+

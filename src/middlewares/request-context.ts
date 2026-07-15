@@ -1,18 +1,36 @@
 import {RequestHandler} from "express";
+import {logger} from "../lib/logger";
+import {httpRequestDurationMicroseconds, errorRates} from "../lib/metrics";
+import pinoHttp from "pino-http";
+import { Request, Response, NextFunction } from "express";
+import crypto from "crypto";
 
 export const requestContext: RequestHandler = (req, res, next) => {};
 
-export const accessLog: RequestHandler = (req, res, next) => {
-  const start = process.hrtime.bigint();
+// Add structured logging
+export const httpLogger = pinoHttp({
+  logger,
+  customProps: (req, res) => {
+    return {
+      requestId: (req as any).id,
+    };
+  }
+});
 
-  // res.on("finish", () => {
-  //   const ms = Math.round(Number(process.hrtime.bigint() - start) / 1e6);
-  //   console.log(`
-  //       Reaquest took ${ms} to complete,
-  //       method: "${req.method}",
-  //       path: "${req.path}"
-  //       status : "${req.statusCode}"
-  //     `);
-  // });
+export const accessLog = (req: Request, res: Response, next: NextFunction) => {
+  const requestId = crypto.randomUUID();
+  res.setHeader("X-Request-Id", requestId);
+  (req as any).id = requestId;
+  
+  const end = httpRequestDurationMicroseconds.startTimer();
+  
+  res.on("finish", () => {
+    end({ method: req.method, route: req.route?.path || req.path, code: res.statusCode });
+    if (res.statusCode >= 500) {
+      errorRates.inc({ type: "http", component: req.route?.path || req.path });
+    }
+  });
+
+  httpLogger(req, res);
   next();
 };

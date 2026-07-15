@@ -1,5 +1,5 @@
 import {db} from "../../../db";
-import {send} from "../../../lib/email";
+
 import {errors} from "../../../lib/errors";
 import {generateVerificationToken} from "../../../lib/jwt";
 import urls from "../../../lib/urls";
@@ -20,13 +20,7 @@ export default async (data: SignupSchema, tx: DbConnection = db) => {
 
   const verificationLink = urls.generateSignupUrl({token, email: data.email});
 
-  // await send({
-  //   to: data.email,
-  //   data: {
-  //     verificationLink,
-  //   },
-  //   template: "signup-start",
-  // });
+  console.log(`Sending verification email to ${data.email} with link: ${verificationLink}`);
 
   return verificationLink;
 };
