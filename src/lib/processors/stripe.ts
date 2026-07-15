@@ -17,7 +17,7 @@ export class StripeProcessor implements PaymentProcessor {
 
     return {
       processorPaymentId: paymentIntent.id,
-      status: paymentIntent.status === "succeeded" ? "succeeded" : "requires_payment_method",
+      status: paymentIntent.status === "succeeded" ? "succeeded" : "processing",
       clientSecret: paymentIntent.client_secret || undefined,
     };
   }
@@ -33,7 +33,7 @@ export class StripeProcessor implements PaymentProcessor {
 
     return {
       processorPaymentId: paymentIntent.id,
-      status: paymentIntent.status === "requires_capture" ? "authorized" : "requires_payment_method",
+      status: paymentIntent.status === "requires_capture" ? "authorized" : "processing",
       clientSecret: paymentIntent.client_secret || undefined,
     };
   }

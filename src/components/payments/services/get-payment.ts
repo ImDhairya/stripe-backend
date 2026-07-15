@@ -15,7 +15,7 @@ export const getPayment = async (
   }
 
   // Sync with Stripe if status is pending
-  if (payment.processor === "stripe" && (payment.status === "requires_payment_method" || payment.status === "processing")) {
+  if (payment.processor === "stripe" && payment.processorPaymentId && (payment.status === "requires_payment_method" || payment.status === "processing")) {
     const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" as any });
     
     try {
