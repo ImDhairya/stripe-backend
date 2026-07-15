@@ -11,9 +11,11 @@ export const connection = new Redis(env.REDIS_URL, {
 
 export const INBOUND_STRIPE_EVENTS_QUEUE = "inbound-stripe-events";
 export const OUTBOUND_WEBHOOKS_QUEUE = "outbound-webhooks";
+export const DAILY_CLEANUP_QUEUE = "daily-cleanup";
 
 export const inboundQueue = new Queue(INBOUND_STRIPE_EVENTS_QUEUE, { connection: connection as any });
 export const outboundQueue = new Queue(OUTBOUND_WEBHOOKS_QUEUE, { connection: connection as any });
+export const cleanupQueue = new Queue(DAILY_CLEANUP_QUEUE, { connection: connection as any });
 
 export const createWorker = (queueName: string, processor: any, concurrency: number = 5) => {
   const worker = new Worker(queueName, processor, { connection: connection as any, concurrency });
