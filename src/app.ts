@@ -36,6 +36,9 @@ class App {
 
   // initialize middlewares will be used to make the app setup correctly for the cors and related proxy middelware setups
   private initializeMiddlewares() {
+    this.app.get("/health", (_req, res) => {
+      res.status(200).json({ status: "ok" });
+    });
     this.app.get("/metrics", metricsEndpoint);
     this.app.use(accessLog);
     this.app.use(
