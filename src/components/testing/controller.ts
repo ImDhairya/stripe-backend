@@ -2,6 +2,7 @@ import {RequestHandler} from "express";
 import {asyncHandler} from "../../lib/async-handler";
 import {outboundQueue} from "../../lib/bullmq";
 import {v4 as uuidv4} from "uuid";
+import {seedDemoData} from "../../lib/seed-demo";
 
 export const injectFailureHandler = asyncHandler(
   async (req, res) => {
@@ -30,6 +31,16 @@ export const injectFailureHandler = asyncHandler(
       success: true,
       message: "Deliberate failure job enqueued. It will fail 3 times before succeeding.",
       jobId
+    });
+  }
+);
+
+export const seedDemoHandler = asyncHandler(
+  async (req, res) => {
+    const result = await seedDemoData();
+    return res.status(200).json({
+      success: true,
+      data: result,
     });
   }
 );

@@ -6,6 +6,7 @@ import {createPayment} from "./services/create-payment";
 import {capturePayment} from "./services/capture-payment";
 import {cancelPayment} from "./services/cancel-payment";
 import {getPayment} from "./services/get-payment";
+import {getPaymentStats} from "./services/get-payment-stats";
 import {randomUUID} from "crypto";
 
 export const createPaymentHandler = asyncHandler<CreatePaymentSchema>(
@@ -66,6 +67,18 @@ export const getPaymentHandler = asyncHandler(
     return res.status(200).json({
       success: true,
       data: { payment }
+    });
+  }
+);
+
+export const getPaymentStatsHandler = asyncHandler(
+  async (req, res) => {
+    const user = res.locals.user;
+    const stats = await getPaymentStats(user.id, user.role);
+
+    return res.status(200).json({
+      success: true,
+      data: stats
     });
   }
 );

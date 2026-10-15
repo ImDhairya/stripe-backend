@@ -7,7 +7,7 @@ import {ExtractTablesWithRelations} from "drizzle-orm";
 
 export type Models = typeof import("./models/index");
 
-const _db = drizzle(env.DB_URL!, {
+const _db = drizzle(env.DATABASE_URL, {
   schema,
 });
 

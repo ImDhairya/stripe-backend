@@ -17,7 +17,19 @@ export const validateQuery: (schema: z.ZodTypeAny) => RequestHandler = (
   schema: z.ZodTypeAny,
 ) => {
   return asyncHandler(async (req, res, next) => {
-    schema.parse(req.query);
+    const result = schema.parse(req.query);
+    try {
+      Object.defineProperty(req, "query", {
+        value: result,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    } catch {
+      // If Object.defineProperty fails, assign properties
+      Object.assign(req.query, result);
+    }
+    (req as any).parsedQuery = result;
     next();
   });
 };

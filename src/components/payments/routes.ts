@@ -6,7 +6,8 @@ import {
   createPaymentHandler,
   capturePaymentHandler,
   cancelPaymentHandler,
-  getPaymentHandler
+  getPaymentHandler,
+  getPaymentStatsHandler,
 } from "./controller";
 import {createPaymentSchema, capturePaymentSchema} from "./schema";
 
@@ -30,6 +31,12 @@ const routes: Route[] = [
     path: "/v1/payments/:id/cancel",
     middlewares: [rateLimit],
     handler: cancelPaymentHandler,
+  },
+  {
+    method: "get",
+    path: "/v1/payments/stats",
+    middlewares: [rateLimit],
+    handler: getPaymentStatsHandler,
   },
   {
     method: "get",

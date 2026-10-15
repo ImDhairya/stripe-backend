@@ -4,8 +4,8 @@ import redis from "../lib/redis";
 const QUOTA_WINDOW_MONTH = 30 * 24 * 60 * 60; // 30 days roughly
 
 const QUOTAS = {
-  free: { count: 100, volume: 500000 }, // Max 100 payments or $5000 volume per month
-  paid: { count: 10000, volume: 500000 },
+  free: { count: 100, volume: 500000 }, // Max 100 payments or $5,000 / ₹5,000 volume per month
+  paid: { count: 10000, volume: 50000000 }, // Max 10,000 payments or $500,000 / ₹500,000 volume per month
 };
 
 export const quota: RequestHandler = async (req, res, next) => {

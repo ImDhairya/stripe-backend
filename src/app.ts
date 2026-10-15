@@ -15,11 +15,11 @@ import {
 import adminRoutes from "./components/admin/routes";
 import paymentRoutes from "./components/payments/routes";
 import refundRoutes from "./components/refunds/routes";
-import subscriptionRoutes from "./components/subscriptions/routes";
 import searchRoutes from "./components/search/routes";
 import stripeWebhookRoutes from "./components/stripe-webhooks/routes";
 import webhookEndpointRoutes from "./components/webhook-endpoints/routes";
 import testingRoutes from "./components/testing/routes";
+import systemRoutes from "./components/system/routes";
 
 import {metricsEndpoint} from "./lib/metrics";
 
@@ -36,6 +36,18 @@ class App {
 
   // initialize middlewares will be used to make the app setup correctly for the cors and related proxy middelware setups
   private initializeMiddlewares() {
+    this.app.get("/", (_req, res) => {
+      res.status(200).json({
+        service: "PayGate Transaction Engine & Gateway",
+        status: "healthy",
+        version: "1.0.0",
+        endpoints: {
+          health: "/health",
+          metrics: "/metrics",
+          api: "/api/v1",
+        },
+      });
+    });
     this.app.get("/health", (_req, res) => {
       res.status(200).json({ status: "ok" });
     });
@@ -44,7 +56,7 @@ class App {
     this.app.use(
       express.json({
         verify: (req, _res, buf) => {
-          if (req.url?.includes("/stripe/data")) {
+          if (req.url?.includes("/stripe/data") || req.url?.includes("/sandbox-receiver")) {
             (req as any).rawBody = buf;
           }
         },
@@ -57,9 +69,23 @@ class App {
         credentials: true,
         origin: (origin, callback) => {
           if (!origin) return callback(null, true);
-          if (origin === env.FRONTEND_URL) return callback(null, true);
+          if (
+            origin === env.FRONTEND_URL ||
+            env.CORS_ORIGINS.includes(origin) ||
+            origin.startsWith("http://localhost:") ||
+            origin.startsWith("http://127.0.0.1:")
+          ) {
+            return callback(null, true);
+          }
           return callback(new Error("Unknown origin url found"));
         },
+        exposedHeaders: [
+          "X-RateLimit-Limit",
+          "X-RateLimit-Remaining",
+          "X-RateLimit-Reset",
+          "X-Request-Id",
+          "Retry-After",
+        ],
       }),
     );
 
@@ -76,11 +102,11 @@ class App {
       ...adminRoutes,
       ...paymentRoutes,
       ...refundRoutes,
-      ...subscriptionRoutes,
       ...searchRoutes,
       ...stripeWebhookRoutes,
       ...webhookEndpointRoutes,
-      ...testingRoutes
+      ...testingRoutes,
+      ...systemRoutes,
     ];
     const supportedMethods = ["get", "post", "put", "delete", "patch"] as const;
     routes.forEach((route) => {

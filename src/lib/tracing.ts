@@ -2,21 +2,29 @@ import {NodeSDK} from "@opentelemetry/sdk-node";
 import {getNodeAutoInstrumentations} from "@opentelemetry/auto-instrumentations-node";
 import {OTLPTraceExporter} from "@opentelemetry/exporter-trace-otlp-http";
 
-const traceExporter = new OTLPTraceExporter({
-  url: "http://jaeger:4318/v1/traces", // Typically we'd have a Jaeger container, or similar OTLP collector
-});
+const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
 
-export const sdk = new NodeSDK({
-  traceExporter,
-  instrumentations: [getNodeAutoInstrumentations()],
-  serviceName: "paygate-backend",
-});
+let sdk: NodeSDK | null = null;
 
-sdk.start();
+if (endpoint) {
+  const traceExporter = new OTLPTraceExporter({
+    url: endpoint,
+  });
 
-process.on("SIGTERM", () => {
-  sdk.shutdown()
-    .then(() => console.log("Tracing terminated"))
-    .catch((error) => console.log("Error terminating tracing", error))
-    .finally(() => process.exit(0));
-});
+  sdk = new NodeSDK({
+    traceExporter,
+    instrumentations: [getNodeAutoInstrumentations()],
+    serviceName: "paygate-backend",
+  });
+
+  sdk.start();
+
+  process.on("SIGTERM", () => {
+    sdk?.shutdown()
+      .then(() => console.log("Tracing terminated"))
+      .catch((error) => console.log("Error terminating tracing", error))
+      .finally(() => process.exit(0));
+  });
+}
+
+export { sdk };

@@ -1,10 +1,19 @@
 import {db} from "../../../db";
-import {payments, refunds, subscriptions, auditLogs, users} from "../../../db/models";
+import {payments, refunds, auditLogs, users} from "../../../db/models";
 import {SearchSchema} from "../schema";
 import {desc, asc, eq, and, or, sql, gte, lte, ilike} from "drizzle-orm";
 import {NotFoundError} from "../../../lib/errors";
 
-const getSearchConditions = (table: any, userId: string, role: string, resource: string, q?: string, from?: string, to?: string) => {
+const getSearchConditions = (
+  table: any,
+  userId: string,
+  role: string,
+  resource: string,
+  q?: string,
+  status?: string,
+  from?: string,
+  to?: string,
+) => {
   const conditions = [];
 
   // Role scoping: normal users only see their own data
@@ -13,12 +22,40 @@ const getSearchConditions = (table: any, userId: string, role: string, resource:
     conditions.push(eq(table.userId, userId));
   }
 
+  if (status && "status" in table) {
+    conditions.push(eq(table.status, status as any));
+  }
+
   if (q) {
     if (resource === "users") {
-      // Search users by email or name (partial match)
       conditions.push(or(ilike(table.email, `%${q}%`), ilike(table.name, `%${q}%`)));
+    } else if (resource === "payments") {
+      conditions.push(
+        or(
+          sql`${table.id}::text ILIKE ${`%${q}%`}`,
+          sql`${table.status}::text ILIKE ${`%${q}%`}`,
+          sql`${table.processor}::text ILIKE ${`%${q}%`}`,
+          ilike(table.currency, `%${q}%`),
+        ),
+      );
+    } else if (resource === "refunds") {
+      conditions.push(
+        or(
+          sql`${table.id}::text ILIKE ${`%${q}%`}`,
+          sql`${table.paymentId}::text ILIKE ${`%${q}%`}`,
+          ilike(table.reason, `%${q}%`),
+        ),
+      );
+    } else if (resource === "audit-logs") {
+      conditions.push(
+        or(
+          ilike(table.action, `%${q}%`),
+          ilike(table.resourceType, `%${q}%`),
+          ilike(table.resourceId, `%${q}%`),
+        ),
+      );
     } else {
-      conditions.push(eq(table.id, q));
+      conditions.push(sql`${table.id}::text ILIKE ${`%${q}%`}`);
     }
   }
 
@@ -43,9 +80,6 @@ export const searchResource = async (resource: string, userId: string, role: str
     case "refunds":
       table = refunds;
       break;
-    case "subscriptions":
-      table = subscriptions;
-      break;
     case "audit-logs":
       table = auditLogs;
       break;
@@ -56,7 +90,16 @@ export const searchResource = async (resource: string, userId: string, role: str
       throw new NotFoundError("resource:not_found", "audit_logs" as any, `Resource ${resource} not found`);
   }
 
-  const conditions = getSearchConditions(table, userId, role, resource, query.q, query.from, query.to);
+  const conditions = getSearchConditions(
+    table,
+    userId,
+    role,
+    resource,
+    query.q,
+    query.status,
+    query.from,
+    query.to,
+  );
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   
   const orderBy = query.sort === "desc" ? desc(table.createdAt) : asc(table.createdAt);
@@ -78,17 +121,20 @@ export const searchResource = async (resource: string, userId: string, role: str
       }
     : undefined;
 
+  const limit = Math.max(1, Number(query.limit) || 10);
+  const offset = Math.max(0, Number(query.offset) || 0);
+
   const data = selectFields
-    ? await db.select(selectFields).from(table).where(whereClause).orderBy(orderBy).limit(query.limit).offset(query.offset)
-    : await db.select().from(table).where(whereClause).orderBy(orderBy).limit(query.limit).offset(query.offset);
+    ? await db.select(selectFields).from(table).where(whereClause).orderBy(orderBy).limit(limit).offset(offset)
+    : await db.select().from(table).where(whereClause).orderBy(orderBy).limit(limit).offset(offset);
 
   return {
     data,
     pagination: {
-      limit: query.limit,
-      offset: query.offset,
+      limit,
+      offset,
       total,
-      hasMore: query.offset + data.length < total
+      hasMore: offset + data.length < total
     }
   };
 };

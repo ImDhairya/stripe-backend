@@ -14,3 +14,9 @@ export const updateWebhookEndpointSchema = z.object({
 });
 
 export type UpdateWebhookEndpointSchema = z.infer<typeof updateWebhookEndpointSchema>;
+
+export const testWebhookEndpointSchema = z.object({
+  mode: z.enum(["success", "fail_3_times"]).default("success"),
+});
+
+export type TestWebhookEndpointSchema = z.infer<typeof testWebhookEndpointSchema>;

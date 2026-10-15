@@ -1,4 +1,4 @@
-import {PaymentProcessor, ProcessorPaymentResult, ProcessorRefundResult, ProcessorSubscriptionResult} from "./types";
+import {PaymentProcessor, ProcessorPaymentResult, ProcessorRefundResult} from "./types";
 import {v4 as uuidv4} from "uuid";
 
 /**
@@ -9,8 +9,8 @@ import {v4 as uuidv4} from "uuid";
  */
 export class DummyProcessor implements PaymentProcessor {
   private isFailureAmount(amount: number): boolean {
-    // Check if amount ends in .99
-    return amount.toString().endsWith(".99");
+    // Check if amount ends in .99 (either float string ends with .99 or minor units % 100 === 99)
+    return Math.round(amount) % 100 === 99 || amount.toString().endsWith(".99");
   }
 
   async createCharge(amount: number, currency: string, metadata?: Record<string, any>): Promise<ProcessorPaymentResult> {
@@ -49,7 +49,7 @@ export class DummyProcessor implements PaymentProcessor {
   async cancel(processorPaymentId: string): Promise<ProcessorPaymentResult> {
     return {
       processorPaymentId,
-      status: "failed", // effectively failed/cancelled
+      status: "cancelled",
     };
   }
 
@@ -57,45 +57,6 @@ export class DummyProcessor implements PaymentProcessor {
     return {
       processorRefundId: `dummy_re_${uuidv4()}`,
       status: "succeeded",
-    };
-  }
-
-  async createSubscription(customerId: string, priceId: string): Promise<ProcessorSubscriptionResult> {
-    const now = new Date();
-    const nextMonth = new Date(now);
-    nextMonth.setMonth(now.getMonth() + 1);
-    
-    return {
-      processorSubscriptionId: `dummy_sub_${uuidv4()}`,
-      status: "active",
-      currentPeriodStart: now,
-      currentPeriodEnd: nextMonth,
-    };
-  }
-
-  async updateSubscription(processorSubscriptionId: string, newPriceId: string): Promise<ProcessorSubscriptionResult> {
-    const now = new Date();
-    const nextMonth = new Date(now);
-    nextMonth.setMonth(now.getMonth() + 1);
-    
-    return {
-      processorSubscriptionId,
-      status: "active",
-      currentPeriodStart: now,
-      currentPeriodEnd: nextMonth,
-    };
-  }
-
-  async cancelSubscription(processorSubscriptionId: string, immediate?: boolean): Promise<ProcessorSubscriptionResult> {
-    const now = new Date();
-    const nextMonth = new Date(now);
-    nextMonth.setMonth(now.getMonth() + 1);
-
-    return {
-      processorSubscriptionId,
-      status: immediate ? "canceled" : "active",
-      currentPeriodStart: now,
-      currentPeriodEnd: nextMonth,
     };
   }
 }

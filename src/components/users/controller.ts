@@ -27,13 +27,13 @@ const setAuthCookies = (res: any, accessToken: string, refreshToken: string) => 
   res.cookie("token", accessToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: "none",
+    sameSite: isProd ? "none" : "lax",
     maxAge: 15 * 60 * 1000, // 15 mins
   });
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: "none",
+    sameSite: isProd ? "none" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   });
 };
@@ -129,8 +129,8 @@ export const logoutHandler = asyncHandler(async (req, res) => {
   }
 
   const isProd = process.env.NODE_ENV === "production";
-  res.clearCookie("token", { httpOnly: true, secure: isProd, sameSite: "lax" });
-  res.clearCookie("refreshToken", { httpOnly: true, secure: isProd, sameSite: "lax" });
+  res.clearCookie("token", { httpOnly: true, secure: isProd, sameSite: isProd ? "none" : "lax" });
+  res.clearCookie("refreshToken", { httpOnly: true, secure: isProd, sameSite: isProd ? "none" : "lax" });
 
   return res.status(200).json({
     success: true,

@@ -3,12 +3,38 @@ import {
   createEndpointHandler,
   listEndpointsHandler,
   updateEndpointHandler,
-  deleteEndpointHandler
+  deleteEndpointHandler,
+  listWebhookEventsHandler,
+  testWebhookEndpointHandler,
+  sandboxReceiverHandler,
 } from "./controller";
-import {createWebhookEndpointSchema, updateWebhookEndpointSchema} from "./schema";
+import {
+  createWebhookEndpointSchema,
+  updateWebhookEndpointSchema,
+  testWebhookEndpointSchema,
+} from "./schema";
 import {requireTier} from "../../middlewares/authorize";
 
 const routes: Route[] = [
+  {
+    method: "post",
+    path: "/v1/webhook-endpoints/sandbox-receiver/:endpointId",
+    isPublic: true,
+    handler: sandboxReceiverHandler,
+  },
+  {
+    method: "get",
+    path: "/v1/webhook-endpoints/events",
+    middlewares: [requireTier("paid")],
+    handler: listWebhookEventsHandler,
+  },
+  {
+    method: "post",
+    path: "/v1/webhook-endpoints/:id/test",
+    schema: testWebhookEndpointSchema,
+    middlewares: [requireTier("paid")],
+    handler: testWebhookEndpointHandler,
+  },
   {
     method: "post",
     path: "/v1/webhook-endpoints",
@@ -34,7 +60,7 @@ const routes: Route[] = [
     path: "/v1/webhook-endpoints/:id",
     middlewares: [requireTier("paid")],
     handler: deleteEndpointHandler,
-  }
+  },
 ];
 
 export default routes;

@@ -1,9 +1,10 @@
 import {Job} from "bullmq";
 import Stripe from "stripe";
 import {db} from "../../db";
-import {stripeEvents, subscriptions} from "../../db/models";
+import {stripeEvents, payments} from "../../db/models";
 import {eq} from "drizzle-orm";
 import pino from "pino";
+import {dispatchWebhookEvent} from "../../lib/webhook-dispatcher";
 
 const logger = pino({ name: "inbound-stripe-processor" });
 
@@ -13,27 +14,101 @@ export const processInboundStripe = async (job: Job) => {
   logger.info({ eventId: event.id, type: event.type }, "Processing inbound stripe event");
 
   try {
-    // Example: Dunning process for failed subscription payments
-    if (event.type === "invoice.payment_failed") {
-      const invoice = event.data.object as Stripe.Invoice;
-      if ((invoice as any).subscription) {
-        // Mark local subscription as past_due
-        const subId = (invoice as any).subscription as string;
-        await db.update(subscriptions)
-          .set({ status: "past_due" })
-          .where(eq(subscriptions.processorSubscriptionId, subId));
-        
-        logger.info({ subId }, "Marked subscription as past_due due to payment failure");
+    if (event.type === "payment_intent.succeeded") {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const [payment] = await db
+        .select()
+        .from(payments)
+        .where(eq(payments.processorPaymentId, paymentIntent.id));
+
+      if (payment) {
+        const [updated] = await db
+          .update(payments)
+          .set({
+            status: "succeeded",
+            capturedAmount: payment.amount,
+          })
+          .where(eq(payments.id, payment.id))
+          .returning();
+
+        if (updated) {
+          logger.info({ paymentId: payment.id }, "Synced payment status to succeeded via webhook");
+
+          await dispatchWebhookEvent(payment.userId, "payment.succeeded", {
+            id: updated.id,
+            amount: updated.amount,
+            currency: updated.currency,
+            status: updated.status,
+            processor: updated.processor,
+            capturedAmount: updated.capturedAmount,
+          });
+        }
       }
     }
 
-    if (event.type === "customer.subscription.deleted") {
-      const sub = event.data.object as Stripe.Subscription;
-      await db.update(subscriptions)
-        .set({ status: "canceled" })
-        .where(eq(subscriptions.processorSubscriptionId, sub.id));
-      
-      logger.info({ subId: sub.id }, "Marked subscription as canceled");
+    if (event.type === "payment_intent.payment_failed") {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const [payment] = await db
+        .select()
+        .from(payments)
+        .where(eq(payments.processorPaymentId, paymentIntent.id));
+
+      if (payment) {
+        const [updated] = await db
+          .update(payments)
+          .set({
+            status: "failed",
+          })
+          .where(eq(payments.id, payment.id))
+          .returning();
+
+        if (updated) {
+          logger.info({ paymentId: payment.id }, "Synced payment status to failed via webhook");
+
+          await dispatchWebhookEvent(payment.userId, "payment.failed", {
+            id: updated.id,
+            amount: updated.amount,
+            currency: updated.currency,
+            status: updated.status,
+            processor: updated.processor,
+          });
+        }
+      }
+    }
+
+    if (event.type === "charge.refunded") {
+      const charge = event.data.object as Stripe.Charge;
+      const paymentIntentId = (charge.payment_intent as string) || charge.id;
+      const [payment] = await db
+        .select()
+        .from(payments)
+        .where(eq(payments.processorPaymentId, paymentIntentId));
+
+      if (payment) {
+        const refundAmount = charge.amount_refunded
+          ? charge.amount_refunded.toString()
+          : payment.amount;
+
+        const [updated] = await db
+          .update(payments)
+          .set({
+            status: "refunded",
+            refundedAmount: refundAmount,
+          })
+          .where(eq(payments.id, payment.id))
+          .returning();
+
+        if (updated) {
+          logger.info({ paymentId: payment.id }, "Synced payment status to refunded via webhook");
+
+          await dispatchWebhookEvent(payment.userId, "refund.succeeded", {
+            id: updated.id,
+            paymentId: updated.id,
+            amount: refundAmount,
+            status: "succeeded",
+          });
+        }
+      }
     }
 
     // Mark event as processed

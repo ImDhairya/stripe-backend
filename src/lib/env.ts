@@ -4,7 +4,6 @@ dotenv.config();
 
 const envSchema = z.object({
   PORT: z.coerce.number(),
-  DB_URL: z.string(),
   DATABASE_URL: z.string(),
 
   NODE_ENV: z.enum(["development", "production"]),
@@ -32,6 +31,8 @@ const envSchema = z.object({
         .map((origin) => origin.trim())
         .filter((origin) => origin.length > 0),
     ),
+
+  RUN_WORKERS_IN_PROCESS: z.string().default("true").transform((v) => v === "true"),
 });
 
 const parsed = envSchema.safeParse(process.env);

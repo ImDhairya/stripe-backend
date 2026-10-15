@@ -34,8 +34,9 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 RUN npm ci --omit=dev
 ENV NODE_ENV=production
 
-# Copy the compiled output from the builder stage
+# Copy the compiled output and migrations from the builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/src/db/migrations ./dist/db/migrations
 
 USER nodejs
 EXPOSE 3000

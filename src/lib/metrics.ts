@@ -1,4 +1,5 @@
 import client from "prom-client";
+export { client };
 import {inboundQueue, outboundQueue} from "./bullmq";
 import {RequestHandler} from "express";
 

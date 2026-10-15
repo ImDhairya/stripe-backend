@@ -4,11 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/db/migrations dist/db/ 2>/dev/null || true",
     "dev": "tsx watch --clear-screen=false src/index.ts",
     "dev:worker": "tsx watch --clear-screen=false src/worker/index.ts",
     "start": "node dist/index.js",
-    "start:worker": "node dist/worker/index.js"
+    "start:worker": "node dist/worker/index.js",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx -e \"import {seedDemoData} from './src/lib/seed-demo'; seedDemoData().then(() => process.exit(0));\""
   },
   "engines": {
     "node": ">=22"
