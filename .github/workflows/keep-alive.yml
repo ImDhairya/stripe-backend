@@ -1,10 +1,10 @@
 name: Keep Alive - Ping Render Health
 
 on:
-  schedule:
+  # schedule:
     # Render free tier spins down after 15 min of inactivity.
     # Ping every 14 minutes to keep the server awake.
-    - cron: "*/14 * * * *"
+    # - cron: "*/14 * * * *"
   workflow_dispatch: # Allow manual trigger from GitHub Actions UI
 
 jobs:
