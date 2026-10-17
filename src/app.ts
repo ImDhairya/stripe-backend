@@ -86,6 +86,14 @@ class App {
           "X-Request-Id",
           "Retry-After",
         ],
+        allowedHeaders: [
+          "Content-Type",
+          "Authorization",
+          "X-Refresh-Token",
+          "X-Request-Id",
+          "X-Idempotency-Key",
+          "Idempotency-Key",
+        ],
       }),
     );
 

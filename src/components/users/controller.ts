@@ -67,6 +67,8 @@ export const signupCompleteHandler = asyncHandler<signupCompleteSchema>(
         message: "Signup completed successfully.",
         data: {
           user: { id: result.id, email: result.email, role: result.role, tier: result.tier },
+          accessToken,
+          refreshToken,
         },
       });
     } catch (error) {
@@ -92,12 +94,17 @@ export const loginHandler = asyncHandler<LoginSchema>(async (req, res) => {
     message: "Login successful.",
     data: {
       user: { id: result.id, email: result.email, role: result.role, tier: result.tier },
+      accessToken,
+      refreshToken,
     },
   });
 });
 
 export const refreshTokenHandler = asyncHandler(async (req, res) => {
-  const token = req.cookies?.refreshToken;
+  const token =
+    req.cookies?.refreshToken ||
+    (req.body as any)?.refreshToken ||
+    (req.headers["x-refresh-token"] as string);
   if (!token) {
     throw new UnauthenticatedError("auth:invalid_token", "Refresh token is missing.");
   }
@@ -111,6 +118,10 @@ export const refreshTokenHandler = asyncHandler(async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Tokens refreshed successfully",
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      },
     });
   } catch (error) {
     throw new UnauthenticatedError("auth:invalid_token", "Refresh token is invalid or expired.");
@@ -118,7 +129,10 @@ export const refreshTokenHandler = asyncHandler(async (req, res) => {
 });
 
 export const logoutHandler = asyncHandler(async (req, res) => {
-  const rToken = req.cookies?.refreshToken;
+  const rToken =
+    req.cookies?.refreshToken ||
+    (req.body as any)?.refreshToken ||
+    (req.headers["x-refresh-token"] as string);
   if (rToken) {
     try {
       const payload = await verifyRefreshTokenJWT(rToken);
