@@ -42,24 +42,36 @@ export const validateQuery: (schema: z.ZodTypeAny) => RequestHandler = (
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   if (err instanceof ZodError) {
+    const message = err.issues[0]?.message || "Validation error";
     return res.status(400).json({
+      success: false,
+      message,
       issue: err.issues,
+      error: {
+        message,
+        status: 400,
+      },
     });
   }
 
   const message = err.message || "Something went wrong";
 
   return res.status(err.status || 500).json({
+    success: false,
+    message,
     error: {
       message,
       status: err.status || 500,
       resource: err.resource,
+      type: err.type,
     },
   });
 };
 
 export const routeNotFoundHandler: RequestHandler = (req, res, next) => {
   res.status(404).json({
+    success: false,
+    message: "Route not found",
     error: {
       message: "Route not found",
       status: 404,
